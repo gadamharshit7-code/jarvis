@@ -125,9 +125,12 @@ final class JarvisController: ObservableObject {
         recognitionTask?.cancel()
         recognitionTask = nil
         recognitionRequest?.endAudio()
-        recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
-        recognitionRequest?.shouldReportPartialResults = true
-        if let request = recognitionRequest { startRecognitionTask() }
+        recognitionRequest = nil
+        audioEngine.stop()
+        audioEngine.inputNode.removeTap(onBus: 0)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
+            self?.beginListening()
+        }
     }
 
     private func detectClap() {
