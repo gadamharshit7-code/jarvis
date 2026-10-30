@@ -13,7 +13,7 @@ final class JarvisController: ObservableObject {
     @Published var showSettings = false
 
     private let audioEngine = AVAudioEngine()
-    private let speechSynth = AVSpeechSynthesizer()
+    private var fishAudioPlayer: AVAudioPlayer?
     private var recognizer: SFSpeechRecognizer? = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
@@ -77,7 +77,10 @@ final class JarvisController: ObservableObject {
                     var sum: Float = 0
                     for i in 0..<count { sum += channel[i] * channel[i] }
                     let rms = sqrt(sum / Float(count))
-                    if rms > 0.42 {
+                    var peak: Float = 0
+                    for i in 0..<count { peak = max(peak, abs(channel[i])) }
+                    let crest = peak / max(rms, 0.001)
+                    if peak > 0.78 && rms > 0.10 && crest > 3.0 {
                         DispatchQueue.main.async { self.detectClap() }
                     }
                 }
@@ -134,14 +137,9 @@ final class JarvisController: ObservableObject {
     }
 
     private func detectClap() {
-        guard Date().timeIntervalSince(clapCooldown) > 1.2 else { return }
+        guard Date().timeIntervalSince(clapCooldown) > 1.4 else { return }
         clapCooldown = Date()
-        if Date().timeIntervalSince(lastClap) < 0.7 {
-            lastClap = .distantPast
-            wake()
-        } else {
-            lastClap = Date()
-        }
+        wake()
     }
 
     private func wake() {
@@ -202,11 +200,33 @@ final class JarvisController: ObservableObject {
     }
 
     private func speak(_ text: String) {
-        let utterance = AVSpeechUtterance(string: text)
-        utterance.voice = AVSpeechSynthesisVoice(language: "en-GB")
-        utterance.rate = 0.48
-        speechSynth.stopSpeaking(at: .immediate)
-        speechSynth.speak(utterance)
+        Task { await speakWithFishAudio(text) }
+    }
+
+    private func speakWithFishAudio(_ text: String) async {
+        guard !backendURL.isEmpty, let url = URL(string: backendURL + "/api/speak") else {
+            status = "Set backend URL for Fish Audio voice"
+            return
+        }
+        do {
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.timeoutInterval = 45
+            request.httpBody = try JSONSerialization.data(withJSONObject: ["text": text])
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse,
+                  (200..<300).contains(http.statusCode),
+                  http.value(forHTTPHeaderField: "Content-Type")?.contains("audio") == true else {
+                throw URLError(.badServerResponse)
+            }
+            let player = try AVAudioPlayer(data: data)
+            fishAudioPlayer = player
+            player.prepareToPlay()
+            player.play()
+        } catch {
+            status = "Fish Audio unavailable — check FISH_API_KEY and FISH_VOICE_ID"
+        }
     }
 }
 
