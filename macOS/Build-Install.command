@@ -31,16 +31,14 @@ cat > "$PLIST_PATH" <<PLIST
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
 <key>Label</key><string>com.personal.jarvisassistant</string>
-<key>ProgramArguments</key><array><string>$MACOS/Jarvis</string></array>
+<key>ProgramArguments</key><array><string>/usr/bin/open</string><string>-a</string><string>$APP_DIR</string></array>
 <key>RunAtLoad</key><true/>
-<key>KeepAlive</key><true/>
 <key>StandardOutPath</key><string>$HOME/Library/Logs/jarvis.log</string>
 <key>StandardErrorPath</key><string>$HOME/Library/Logs/jarvis-error.log</string>
 </dict></plist>
 PLIST
 launchctl bootout "gui/$(id -u)" "$PLIST_PATH" >/dev/null 2>&1 || true
 launchctl bootstrap "gui/$(id -u)" "$PLIST_PATH"
-open "$APP_DIR"
 echo
 echo "J.A.R.V.I.S. was built and added to your login startup items."
 echo "Approve microphone and speech recognition when macOS asks."
