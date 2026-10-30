@@ -104,10 +104,17 @@ final class JarvisController: ObservableObject {
                     let text = result.bestTranscription.formattedString
                     self.transcript = text
                     let normalized = text.lowercased()
-                    if normalized.contains("hey jarvis") || normalized.contains("hey j.a.r.v.i.s") || normalized.contains("hey jars") {
+                    let wakePhrases = ["hey j.a.r.v.i.s", "hey jarvis", "hey jars"]
+                    let matchedWake = wakePhrases.first { normalized.contains($0) }
+                    if let phrase = matchedWake {
                         if Date().timeIntervalSince(self.lastWake) > 5 {
                             self.lastWake = Date()
                             self.wake()
+                        }
+                        let commandAfterWake = self.textAfterWakePhrase(text, phrase: phrase)
+                        if !commandAfterWake.isEmpty {
+                            self.pendingSpeech = commandAfterWake
+                            if result.isFinal { self.handleCommand(commandAfterWake) }
                         }
                     } else if self.isArmed && !result.isFinal {
                         self.pendingSpeech = text
@@ -121,6 +128,12 @@ final class JarvisController: ObservableObject {
                 }
             }
         }
+    }
+
+    private func textAfterWakePhrase(_ text: String, phrase: String) -> String {
+        guard let range = text.lowercased().range(of: phrase) else { return "" }
+        return String(text[range.upperBound...])
+            .trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
     }
 
     private func restartRecognition() {
