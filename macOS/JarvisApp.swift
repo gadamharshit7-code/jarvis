@@ -248,52 +248,140 @@ struct JarvisApp: App {
 struct ContentView: View {
     @ObservedObject var controller: JarvisController
     @State private var command = ""
+    @State private var selected = "HOME"
+    private let cyan = Color(red: 0.04, green: 0.78, blue: 1)
+    private let panel = Color(red: 0.008, green: 0.055, blue: 0.09)
 
     var body: some View {
-        ZStack {
-            LinearGradient(colors: [Color(red: 0.015, green: 0.045, blue: 0.08), Color(red: 0.025, green: 0.12, blue: 0.19)], startPoint: .topLeading, endPoint: .bottomTrailing).ignoresSafeArea()
-            VStack(spacing: 22) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("STARK INDUSTRIES // PERSONAL AI").font(.system(size: 10, weight: .semibold, design: .monospaced)).tracking(3).foregroundStyle(.cyan)
-                        Text("J.A.R.V.I.S.").font(.system(size: 28, weight: .light, design: .rounded)).tracking(6)
-                    }
-                    Spacer()
-                    Circle().fill(controller.isListening ? .green : .orange).frame(width: 8, height: 8)
-                    Text(controller.status.uppercased()).font(.system(size: 10, design: .monospaced)).foregroundStyle(.cyan)
+        GeometryReader { geo in
+            ZStack {
+                Color(red: 0.002, green: 0.012, blue: 0.025).ignoresSafeArea()
+                VStack(spacing: 0) {
+                    HStack(spacing: 14) {
+                        ZStack {
+                            Circle().stroke(cyan, lineWidth: 3).frame(width: 55, height: 55)
+                            Circle().stroke(cyan.opacity(0.7), lineWidth: 2).frame(width: 38, height: 38)
+                            Circle().fill(cyan).frame(width: 13, height: 13).shadow(color: cyan, radius: 8)
+                        }
+                        Text("J.A.R.V.I.S.").font(.system(size: 30, weight: .medium)).tracking(8).foregroundStyle(cyan)
+                        Spacer()
+                        Text(controller.isListening ? "SYSTEMS ONLINE" : "SYSTEM STANDBY")
+                        Text(Date(), style: .time)
+                        Text(Date(), style: .date)
+                    }.font(.system(size: 11, design: .monospaced)).foregroundStyle(cyan).padding(22)
+                    Rectangle().fill(cyan.opacity(0.55)).frame(height: 1)
+                    HStack(alignment: .top, spacing: 18) {
+                        VStack(spacing: 0) {
+                            ForEach(["HOME","SYSTEMS","COMMUNICATIONS","DIAGNOSTICS","FILE ACCESS","SETTINGS"], id: \.self) { item in
+                                Button {
+                                    selected = item
+                                    if item == "SETTINGS" { controller.showSettings = true }
+                                } label: {
+                                    HStack {
+                                        Image(systemName: navIcon(item)).frame(width: 25)
+                                        Text(item).font(.system(size: 12, design: .monospaced)).tracking(1)
+                                        Spacer()
+                                    }.foregroundStyle(selected == item ? .white : cyan)
+                                     .padding(15).background(selected == item ? cyan.opacity(0.18) : .clear)
+                                     .overlay(alignment: .leading) { if selected == item { Rectangle().fill(cyan).frame(width: 3) } }
+                                }.buttonStyle(.plain)
+                            }
+                        }.frame(width: geo.size.width * 0.205).background(panel)
+                         .overlay(RoundedRectangle(cornerRadius: 7).stroke(cyan.opacity(0.55)))
+                        Spacer(minLength: 0)
+                        VStack(spacing: 13) {
+                            ZStack {
+                                ForEach(0..<8, id: \.self) { i in
+                                    Circle().stroke(cyan.opacity(0.2 + Double(i) * 0.035), lineWidth: 1)
+                                        .frame(width: CGFloat(170 + i * 37), height: CGFloat(170 + i * 37))
+                                }
+                                Circle().trim(from: 0.03, to: 0.28).stroke(cyan, style: StrokeStyle(lineWidth: 8, lineCap: .round)).frame(width: 300, height: 300).rotationEffect(.degrees(-35))
+                                Circle().trim(from: 0.39, to: 0.72).stroke(cyan.opacity(0.9), style: StrokeStyle(lineWidth: 7, lineCap: .round)).frame(width: 350, height: 350).rotationEffect(.degrees(25))
+                                Circle().trim(from: 0.12, to: 0.86).stroke(Color.blue.opacity(0.8), style: StrokeStyle(lineWidth: 2, dash: [3,8])).frame(width: 390, height: 390)
+                                Circle().fill(RadialGradient(colors: [cyan, Color(red: 0.01, green: 0.16, blue: 0.29), .black], center: .center, startRadius: 3, endRadius: 70)).frame(width: 110, height: 110).shadow(color: cyan, radius: 25)
+                            }.frame(height: 470)
+                            Text("J.A.R.V.I.S. // ONLINE").font(.system(size: 17, design: .monospaced)).tracking(4).foregroundStyle(cyan)
+                            Text("SAY “HEY JARVIS” OR CLAP ONCE TO ACTIVATE").font(.system(size: 10, design: .monospaced)).tracking(1).foregroundStyle(.white.opacity(0.65))
+                            Text(controller.reply).font(.system(size: 13)).foregroundStyle(.white).multilineTextAlignment(.center).lineLimit(2)
+                            HStack {
+                                TextField("Speak or type a command…", text: $command).textFieldStyle(.roundedBorder).onSubmit { controller.sendTypedCommand(command); command = "" }
+                                Button("SEND") { controller.sendTypedCommand(command); command = "" }.buttonStyle(.borderedProminent).tint(cyan)
+                            }.frame(maxWidth: 510)
+                        }.frame(maxWidth: .infinity)
+                        Spacer(minLength: 0)
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text("HELLO, MASTER").font(.system(size: 20, weight: .medium)).tracking(4).foregroundStyle(cyan)
+                            Text("HOW CAN I HELP YOU TODAY?").font(.system(size: 10)).tracking(1.3).foregroundStyle(cyan).padding(.top, 10).padding(.bottom, 20)
+                            VStack(spacing: 0) {
+                                ForEach(["ARMOR SYSTEMS","FLIGHT SYSTEMS","WEAPONS SYSTEMS","SENSORS","AI CORE"], id: \.self) { item in
+                                    HStack {
+                                        Text(item).font(.system(size: 10, design: .monospaced))
+                                        Spacer()
+                                        Text(item == "AI CORE" && !controller.isListening ? "STANDBY" : "ONLINE").font(.system(size: 10, design: .monospaced)).foregroundStyle(cyan)
+                                    }.padding(.vertical, 14)
+                                    Rectangle().fill(cyan.opacity(0.2)).frame(height: 1)
+                                }
+                            }.padding(12).background(panel).overlay(RoundedRectangle(cornerRadius: 6).stroke(cyan.opacity(0.5)))
+                            Spacer().frame(height: 18)
+                            Canvas { ctx, size in
+                                for row in 0..<13 {
+                                    for col in 0..<28 {
+                                        let rect = CGRect(x: CGFloat(col) * size.width / 28 + 1, y: CGFloat(row) * size.height / 13 + 1, width: 2.3, height: 2.3)
+                                        ctx.fill(Path(ellipseIn: rect), with: .color(cyan.opacity(0.55)))
+                                    }
+                                }
+                            }.frame(height: 125).background(panel)
+                            HStack {
+                                Text("GLOBAL NETWORK").font(.system(size: 10, design: .monospaced))
+                                Spacer()
+                                Text("CONNECTED").font(.system(size: 10, design: .monospaced)).foregroundStyle(cyan)
+                            }.padding(10).background(panel).overlay(RoundedRectangle(cornerRadius: 6).stroke(cyan.opacity(0.45)))
+                            Spacer().frame(height: 14)
+                            Button(controller.isListening ? "PAUSE MICROPHONE" : "START MICROPHONE") {
+                                controller.isListening ? controller.stop() : controller.start()
+                            }.buttonStyle(.bordered).tint(cyan).frame(maxWidth: .infinity)
+                        }.padding(15).frame(width: geo.size.width * 0.255).background(panel.opacity(0.85))
+                         .overlay(RoundedRectangle(cornerRadius: 7).stroke(cyan.opacity(0.5)))
+                    }.padding(.horizontal, 18).padding(.top, 24)
+                    Spacer(minLength: 6)
+                    HStack(alignment: .bottom) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("J.A.R.V.I.S.").font(.system(size: 23)).tracking(8).foregroundStyle(cyan)
+                            Text("JUST A RATHER VERY INTELLIGENT SYSTEM").font(.system(size: 10, design: .monospaced)).tracking(3).foregroundStyle(cyan)
+                            Rectangle().fill(cyan).frame(width: 430, height: 1)
+                        }
+                        Spacer()
+                        HStack(alignment: .bottom, spacing: 4) {
+                            ForEach(0..<24, id: \.self) { i in Rectangle().fill(cyan.opacity(0.65)).frame(width: 5, height: CGFloat(10 + (i * 17 % 40))) }
+                        }.frame(height: 45, alignment: .bottom)
+                    }.padding(.horizontal, 28).padding(.vertical, 14)
                 }
-                Divider().overlay(.cyan.opacity(0.25))
-                Spacer()
-                ZStack {
-                    Circle().stroke(.cyan.opacity(0.25), lineWidth: 1).frame(width: 240, height: 240)
-                    Circle().stroke(style: StrokeStyle(lineWidth: 1, dash: [3, 7])).foregroundStyle(.cyan.opacity(0.55)).frame(width: 205, height: 205)
-                    Circle().stroke(.cyan.opacity(0.45), lineWidth: 2).frame(width: 165, height: 165)
-                    Circle().fill(RadialGradient(colors: [.cyan, Color(red: 0.02, green: 0.16, blue: 0.27), .black], center: .center, startRadius: 3, endRadius: 70)).frame(width: 112, height: 112).shadow(color: .cyan.opacity(0.65), radius: 22)
-                }
-                Text(controller.status == "Paused" ? "STANDBY" : "SYSTEMS ONLINE").font(.system(size: 22, weight: .light, design: .monospaced)).tracking(5)
-                Text("Say “Hey JARVIS” or clap twice to wake me").font(.system(size: 12, design: .monospaced)).foregroundStyle(.white.opacity(0.6))
-                Text(controller.reply).font(.system(size: 15)).multilineTextAlignment(.center).lineSpacing(5).frame(maxWidth: 560).padding(.horizontal, 20)
-                Spacer()
-                HStack {
-                    TextField("Speak after wake-up, or type a command…", text: $command).textFieldStyle(.roundedBorder).onSubmit { controller.sendTypedCommand(command); command = "" }
-                    Button("SEND") { controller.sendTypedCommand(command); command = "" }.buttonStyle(.borderedProminent).tint(.cyan)
-                    Button("SETTINGS") { controller.showSettings = true }.buttonStyle(.bordered)
-                    Button(controller.isListening ? "PAUSE MIC" : "START MIC") { controller.isListening ? controller.stop() : controller.start() }.buttonStyle(.bordered)
-                }
-                Text("Wake detection runs on this Mac. Commands sent to the AI backend are processed by the configured online service.").font(.system(size: 10)).foregroundStyle(.white.opacity(0.45))
-            }.padding(28)
+            }
         }
+        .frame(minWidth: 1250, minHeight: 850)
+        .preferredColorScheme(.dark)
         .sheet(isPresented: $controller.showSettings) {
             VStack(alignment: .leading, spacing: 16) {
-                Text("J.A.R.V.I.S. SETTINGS").font(.headline).foregroundStyle(.cyan)
-                Text("Deployed backend URL").font(.subheadline)
+                Text("J.A.R.V.I.S. SETTINGS").font(.headline).foregroundStyle(cyan)
+                Text("Deployed backend URL")
                 TextField("https://your-project.vercel.app", text: $controller.backendURL).textFieldStyle(.roundedBorder)
-                Text("Paste only the public website URL here — never an API key. The AI secret stays on the server.").font(.caption).foregroundStyle(.secondary)
+                Text("Fish Audio uses your confirmed voice ID configured securely on the backend.").font(.caption).foregroundStyle(.secondary)
                 HStack {
                     Button("Save") { controller.saveBackend(); controller.showSettings = false }.buttonStyle(.borderedProminent)
                     Button("Cancel") { controller.showSettings = false }
                 }
-            }.padding(24).frame(width: 430)
+            }.padding(24).frame(width: 440)
+        }
+    }
+
+    private func navIcon(_ item: String) -> String {
+        switch item {
+        case "HOME": return "house.fill"
+        case "SYSTEMS": return "gearshape.fill"
+        case "COMMUNICATIONS": return "antenna.radiowaves.left.and.right"
+        case "DIAGNOSTICS": return "waveform.path.ecg"
+        case "FILE ACCESS": return "folder"
+        default: return "slider.horizontal.3"
         }
     }
 }
