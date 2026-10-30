@@ -1,0 +1,29 @@
+name: macOS build check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Show Swift version
+        run: swift --version
+      - name: Compile J.A.R.V.I.S.
+        run: |
+          swiftc macOS/JarvisApp.swift -o /tmp/Jarvis \
+            -framework SwiftUI \
+            -framework AppKit \
+            -framework AVFoundation \
+            -framework Speech
+      - name: Validate backend JavaScript syntax
+        run: |
+          node --check api/chat.js
+          node --check api/speak.js
+          node --check api/health.js
